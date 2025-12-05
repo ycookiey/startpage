@@ -1,8 +1,9 @@
-const CACHE_NAME = 'startpage-v1';
+const CACHE_NAME = 'startpage-v2';
 const ASSETS = [
   '/',
   '/index.html',
-  // Inlined CSS/JS are part of index.html, no separate fetch needed
+  '/manifest.json',
+  '/icon.svg'
 ];
 
 // Install: Cache core assets
@@ -29,14 +30,13 @@ self.addEventListener('activate', (event) => {
   );
 });
 
-// Fetch: Stale-while-revalidate for index.html to ensure freshness but speed
-// For other assets (if any in future): Cache First
+// Fetch: Network First for API, Stale-while-revalidate for assets
 self.addEventListener('fetch', (event) => {
   const url = new URL(event.request.url);
 
-  // Network-first for private redirects (API), Cache-first/Stale-while-revalidate for UI
+  // Network-first for private redirects (API)
   if (url.hostname === 'redirect.ycookiey.com') {
-    return; // Let browser handle redirects directly
+    return;
   }
 
   event.respondWith(
