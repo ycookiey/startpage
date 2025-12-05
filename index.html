@@ -1,0 +1,201 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SP</title>
+    <meta name="description" content="Personal Start Page">
+    <meta name="theme-color" content="#1a1a1a">
+    <link rel="manifest" href="/manifest.json">
+    <style>
+        :root {
+            --bg-color: #1a1a1a;
+            --text-color: #e0e0e0;
+            --card-bg: #2a2a2a;
+            --hover-bg: #3a3a3a;
+            --accent-color: #00adb5;
+            --font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+        }
+        @media (prefers-color-scheme: light) {
+            :root {
+                --bg-color: #f5f5f5;
+                --text-color: #333;
+                --card-bg: #fff;
+                --hover-bg: #eee;
+            }
+        }
+        body {
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            font-family: var(--font-family);
+            margin: 0;
+            padding: 20px;
+            display: flex;
+            justify-content: center;
+        }
+        main {
+            width: 100%;
+            max-width: 1200px;
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 20px;
+        }
+        h2 {
+            font-size: 1.2rem;
+            margin-bottom: 10px;
+            border-bottom: 2px solid var(--accent-color);
+            padding-bottom: 5px;
+            display: inline-block;
+        }
+        .section {
+            margin-bottom: 20px;
+        }
+        .link-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
+            gap: 10px;
+        }
+        a {
+            display: block;
+            text-decoration: none;
+            color: var(--text-color);
+            background-color: var(--card-bg);
+            padding: 15px 10px;
+            border-radius: 8px;
+            text-align: center;
+            transition: transform 0.1s, background-color 0.1s;
+            font-size: 0.9rem;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        a:hover {
+            background-color: var(--hover-bg);
+            transform: translateY(-2px);
+        }
+        /* Mobile optimization */
+        @media (max-width: 600px) {
+            .link-grid {
+                grid-template-columns: repeat(3, 1fr);
+            }
+        }
+    </style>
+</head>
+<body>
+    <main>
+        <!-- Top -->
+        <div class="section">
+            <h2>Top</h2>
+            <div class="link-grid">
+                <a href="https://outlook.office.com/">Outlook</a>
+                <a href="https://www.youtube.com/">YouTube</a>
+                <a href="https://music.youtube.com/library">YT Music</a>
+                <a href="https://www.audible.co.jp/">Audible</a>
+                <a href="https://calendar.notion.so/">Nカレンダー</a>
+                <a href="https://calendar.google.com/calendar/u/0/r?hl=ja">Calendar</a>
+                <a href="https://www.google.co.jp/maps/?hl=ja">Map</a>
+                <a href="https://mail.google.com/mail/u/1/#inbox">Gmail</a>
+                <a href="https://docs.google.com/document/">Document</a>
+                <a href="https://docs.google.com/spreadsheets">SpreadSheet</a>
+                <a href="https://aistudio.google.com/prompts/new_chat">Gemini(AS)</a>
+                <a href="https://gemini.google.com/app?hl=ja">Gemini</a>
+                <a href="https://claude.ai/new">Claude</a>
+                <a href="https://chatgpt.com/?model=gpt-4o">ChatGPT</a>
+                <a href="https://notebooklm.google.com/">NotebookLM</a>
+                <a href="https://www.perplexity.ai/">Perplexity</a>
+                <a href="https://labs.google/fx/ja">labs fx</a>
+                <a href="https://stitch.withgoogle.com/?pli=1">stitch</a>
+                <a href="https://v0.dev/">v0</a>
+                <a href="https://github.com/">GitHub</a>
+                <a href="https://dash.cloudflare.com/login">Cloudflare</a>
+                <a href="https://colab.research.google.com/#scrollTo=Wf5KrEb6vrkR">Colab</a>
+                <a href="https://www.deepl.com/ja/translator">Deepl</a>
+                <a href="https://qiita.com/">qiita</a>
+                <a href="https://zenn.dev/dashboard/scraps">Zenn</a>
+                <a href="https://remap-keys.app/configure">remap</a>
+            </div>
+        </div>
+
+        <!-- design -->
+        <div class="section">
+            <h2>design</h2>
+            <div class="link-grid">
+                <a href="https://icones.js.org/collection/all">Icônes</a>
+                <a href="http://colormind.io/bootstrap/">Colormind</a>
+                <a href="https://color.adobe.com/ja/create/color-contrast-analyzer">Adobe Color</a>
+                <a href="https://zenn.dev/takumaru/articles/e8b6a0df7a72cd">Anim Libs</a>
+            </div>
+        </div>
+
+        <!-- CP -->
+        <div class="section">
+            <h2>CP💻️</h2>
+            <div class="link-grid">
+                <a href="https://kenkoooo.com/atcoder/#/table/ycookiey">AC Problems</a>
+                <a href="https://atcoder.jp/home">AC Home</a>
+            </div>
+        </div>
+
+        <!-- vivaldi -->
+        <div class="section">
+            <h2>vivaldi</h2>
+            <div class="link-grid">
+                <a href="vivaldi://restart">再起動</a>
+                <a href="vivaldi://about">about</a>
+                <a href="vivaldi://settings">設定</a>
+                <a href="vivaldi://experiments/">高度な設定</a>
+            </div>
+        </div>
+
+        <!-- Private Sections (Anonymous Random IDs) -->
+        <div class="section">
+            <h2>🔷</h2>
+            <div class="link-grid">
+                <a href="https://redirect.ycookiey.com/r/a1b2c3d4">メール</a>
+                <a href="https://redirect.ycookiey.com/r/e5f6g7h8">Wiki</a>
+                <a href="https://redirect.ycookiey.com/r/i9j0k1l2">勤怠</a>
+                <a href="https://redirect.ycookiey.com/r/m3n4o5p6">aws</a>
+                <a href="https://redirect.ycookiey.com/r/q7r8s9t0">Issue</a>
+                <a href="https://redirect.ycookiey.com/r/u1v2w3x4">App</a>
+                <a href="https://redirect.ycookiey.com/r/y5z6a7b8">figma</a>
+                <a href="https://redirect.ycookiey.com/r/c9d0e1f2">Project</a>
+            </div>
+        </div>
+
+        <div class="section">
+            <h2>🔶</h2>
+            <div class="link-grid">
+                <a href="https://redirect.ycookiey.com/r/g3h4i5j6">DB</a>
+                <a href="https://redirect.ycookiey.com/r/k7l8m9n0">サーバー</a>
+                <a href="https://redirect.ycookiey.com/r/o1p2q3r4">ローカルDB</a>
+                <a href="https://redirect.ycookiey.com/r/s5t6u7v8">3000</a>
+            </div>
+        </div>
+
+        <div class="section">
+            <h2>🟢</h2>
+            <div class="link-grid">
+                <a href="https://redirect.ycookiey.com/r/w9x0y1z2">講義</a>
+                <a href="https://redirect.ycookiey.com/r/a3b4c5d6">課題</a>
+                <a href="https://redirect.ycookiey.com/r/e7f8g9h0">一覧</a>
+                <a href="https://redirect.ycookiey.com/r/i1j2k3l4">ポータル</a>
+                <a href="https://redirect.ycookiey.com/r/m5n6o7p8">Go</a>
+                <a href="https://redirect.ycookiey.com/r/q9r0s1t2">Back</a>
+            </div>
+        </div>
+
+        <div class="section">
+            <h2>🗃️</h2>
+            <div class="link-grid">
+                <a href="https://redirect.ycookiey.com/r/u3v4w5x6">旧メール</a>
+            </div>
+        </div>
+    </main>
+
+    <script defer>
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('/sw.js');
+            });
+        }
+    </script>
+</body>
+</html>
