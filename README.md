@@ -6,6 +6,7 @@
 - URL: `https://sp.ycookiey.com`
 - プラットフォーム: Cloudflare Pages
 - 特徴: 究極のパフォーマンス（インラインCSS、最小HTML）、PWA対応
+- **バックエンド (Private)**: [ycookiey/redirect-api](https://github.com/ycookiey/redirect-api)
 
 ## メンテナンス手順
 
