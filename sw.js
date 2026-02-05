@@ -1,9 +1,10 @@
-const CACHE_NAME = 'startpage-v2';
+const CACHE_NAME = 'startpage-v3';
 const ASSETS = [
   '/',
   '/index.html',
   '/manifest.json',
-  '/icon.svg'
+  '/icon.svg',
+  '/favicons/default.svg'
 ];
 
 // Install: Cache core assets
@@ -30,23 +31,36 @@ self.addEventListener('activate', (event) => {
   );
 });
 
-// Fetch: Network First for API, Stale-while-revalidate for assets
+// Fetch: Cache-first for same-origin assets, skip private redirects
 self.addEventListener('fetch', (event) => {
-  const url = new URL(event.request.url);
+  const { request } = event;
+  const url = new URL(request.url);
 
   // Network-first for private redirects (API)
   if (url.hostname === 'redirect.ycookiey.com') {
     return;
   }
 
+  if (request.method !== 'GET') {
+    return;
+  }
+
+  if (url.origin !== self.location.origin) {
+    return;
+  }
+
   event.respondWith(
-    caches.match(event.request)
-      .then((response) => {
-        // Cache hit - return response
-        if (response) {
-          return response;
+    caches.match(request).then((cached) => {
+      if (cached) {
+        return cached;
+      }
+      return fetch(request).then((response) => {
+        if (response && response.ok) {
+          const cloned = response.clone();
+          caches.open(CACHE_NAME).then((cache) => cache.put(request, cloned));
         }
-        return fetch(event.request);
-      })
+        return response;
+      });
+    })
   );
 });
