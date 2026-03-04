@@ -35,7 +35,92 @@
             margin: 0;
             padding: 20px;
             display: flex;
-            justify-content: center;
+            flex-direction: column;
+            align-items: center;
+        }
+        .cmd-bar {
+            width: 100%;
+            max-width: 1200px;
+            margin-bottom: 16px;
+            position: relative;
+        }
+        .cmd-input {
+            width: 100%;
+            box-sizing: border-box;
+            background-color: var(--card-bg);
+            border: 1px solid transparent;
+            border-radius: 8px;
+            padding: 10px 14px;
+            color: var(--text-color);
+            font-family: var(--font-family);
+            font-size: 0.9rem;
+            outline: none;
+            transition: border-color 0.1s;
+        }
+        .cmd-input:focus {
+            border-color: var(--accent-color);
+        }
+        .cmd-input::placeholder {
+            color: var(--text-color);
+            opacity: 0.4;
+        }
+        .cmd-results {
+            position: absolute;
+            top: 100%;
+            left: 0;
+            right: 0;
+            margin: 4px 0 0;
+            padding: 4px;
+            list-style: none;
+            background-color: var(--card-bg);
+            border-radius: 8px;
+            box-shadow: 0 8px 24px rgba(0,0,0,0.3);
+            max-height: 340px;
+            overflow-y: auto;
+            z-index: 100;
+            display: none;
+        }
+        .cmd-results.open {
+            display: block;
+        }
+        .cmd-results li {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 8px 12px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 0.9rem;
+        }
+        .cmd-results li.active {
+            background-color: var(--hover-bg);
+        }
+        .cmd-results li:hover {
+            background-color: var(--hover-bg);
+        }
+        .cmd-results li .match {
+            color: var(--accent-color);
+            font-weight: 700;
+        }
+        .cmd-results li .section-tag {
+            font-size: 0.7rem;
+            opacity: 0.4;
+            margin-left: auto;
+        }
+        @keyframes cmd-bump {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-3px); }
+        }
+        .cmd-results.bump-top { animation: cmd-bump 0.15s ease; }
+        @keyframes cmd-bump-bottom {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(3px); }
+        }
+        .cmd-results.bump-bottom { animation: cmd-bump-bottom 0.15s ease; }
+        main.dimmed {
+            opacity: 0.3;
+            pointer-events: none;
+            transition: opacity 0.15s;
         }
         main {
             width: 100%;
@@ -109,6 +194,10 @@
     </style>
 </head>
 <body>
+    <div class="cmd-bar">
+        <input class="cmd-input" id="cmdInput" type="text" placeholder="リンクを検索…" autocomplete="off" autofocus>
+        <ul class="cmd-results" id="cmdResults"></ul>
+    </div>
     <main>
         <!-- Top -->
         <div class="section">
@@ -317,6 +406,192 @@
         if (!navigator.connection || !navigator.connection.saveData) {
             defer(loadDeferredIcons);
         }
+
+        // Command bar
+        const cmdInput = document.getElementById('cmdInput');
+        const cmdResults = document.getElementById('cmdResults');
+        const mainEl = document.querySelector('main');
+        let activeIdx = -1;
+        let results = [];
+
+        const HISTORY_KEY = 'sp_history';
+        const SCORE_EXACT = 100;
+        const SCORE_PREFIX = 40;
+        const SCORE_BOUNDARY = 20;
+        const SCORE_CONSECUTIVE = 15;
+        const SCORE_POSITION = 10;
+        const SCORE_SHORT = 5;
+        const SCORE_HISTORY = 30;
+
+        const getHistory = () => {
+            try { return JSON.parse(localStorage.getItem(HISTORY_KEY) || '{}'); }
+            catch { return {}; }
+        };
+        const recordVisit = (href) => {
+            const h = getHistory();
+            h[href] = (h[href] || 0) + 1;
+            localStorage.setItem(HISTORY_KEY, JSON.stringify(h));
+        };
+
+        const linkEls = [...document.querySelectorAll('.link-grid a')];
+        const linkData = linkEls.map((a) => {
+            const section = a.closest('.section');
+            const sectionName = section ? section.querySelector('h2')?.textContent || '' : '';
+            return { text: a.textContent, href: a.getAttribute('href'), section: sectionName, el: a };
+        });
+        const getIcon = (item) => {
+            const logo = item.el.querySelector('.logo');
+            return (logo && logo.classList.contains('logo--loaded')) ? logo.src : ICON_DEFAULT;
+        };
+
+        const isBoundary = (text, i) =>
+            i === 0 ||
+            text[i - 1] === ' ' || text[i - 1] === '-' || text[i - 1] === '_' || text[i - 1] === '/' ||
+            (text[i] !== text[i].toLowerCase() && text[i - 1] === text[i - 1].toLowerCase());
+
+        const fuzzyMatch = (text, query) => {
+            const lower = text.toLowerCase();
+            const indices = [];
+            const exactPos = lower.indexOf(query);
+            if (exactPos >= 0) {
+                for (let i = exactPos; i < exactPos + query.length; i++) indices.push(i);
+                let s = SCORE_EXACT;
+                if (exactPos === 0) s += SCORE_PREFIX;
+                return { score: s, indices };
+            }
+            let qi = 0, score = 0, consecutive = 0, firstMatch = -1;
+            for (let i = 0; i < lower.length && qi < query.length; i++) {
+                if (lower[i] === query[qi]) {
+                    indices.push(i);
+                    if (firstMatch < 0) firstMatch = i;
+                    if (isBoundary(text, i)) score += SCORE_BOUNDARY;
+                    consecutive++;
+                    if (consecutive > 1) score += SCORE_CONSECUTIVE;
+                    qi++;
+                } else {
+                    consecutive = 0;
+                }
+            }
+            if (qi < query.length) return null;
+            score += SCORE_POSITION * (1 - firstMatch / lower.length);
+            score += SCORE_SHORT * (1 / lower.length);
+            return { score, indices };
+        };
+
+        const highlightText = (text, indices) => {
+            const set = new Set(indices);
+            let html = '';
+            for (let i = 0; i < text.length; i++) {
+                const ch = text[i].replace(/&/g, '&amp;').replace(/</g, '&lt;');
+                html += set.has(i) ? `<span class="match">${ch}</span>` : ch;
+            }
+            return html;
+        };
+
+        const openDropdown = () => {
+            cmdResults.classList.add('open');
+            mainEl.classList.add('dimmed');
+        };
+        const closeDropdown = () => {
+            cmdResults.classList.remove('open');
+            mainEl.classList.remove('dimmed');
+            results = [];
+            activeIdx = -1;
+        };
+
+        const renderResults = (items) => {
+            results = items;
+            activeIdx = items.length ? 0 : -1;
+            cmdResults.innerHTML = items.map((item, i) =>
+                `<li data-idx="${i}" class="${i === 0 ? 'active' : ''}">` +
+                `<img class="logo logo--loaded" src="${getIcon(item)}" alt="" width="18" height="18">` +
+                `<span>${item.html}</span>` +
+                `<span class="section-tag">${item.section}</span>` +
+                `</li>`
+            ).join('');
+            if (items.length) openDropdown();
+            else closeDropdown();
+        };
+
+        const bump = (dir) => {
+            const cls = dir < 0 ? 'bump-top' : 'bump-bottom';
+            cmdResults.classList.remove('bump-top', 'bump-bottom');
+            void cmdResults.offsetWidth;
+            cmdResults.classList.add(cls);
+        };
+
+        const setActive = (idx, dir) => {
+            if (!results.length) return;
+            if (idx < 0) { bump(-1); return; }
+            if (idx >= results.length) { bump(1); return; }
+            cmdResults.querySelector('.active')?.classList.remove('active');
+            activeIdx = idx;
+            const li = cmdResults.children[activeIdx];
+            li.classList.add('active');
+            li.scrollIntoView({ block: 'nearest' });
+        };
+
+        const navigate = (href) => {
+            recordVisit(href);
+            window.location.href = href;
+        };
+
+        const search = (q) => {
+            const query = q.toLowerCase();
+            if (!query) { closeDropdown(); return; }
+            const history = getHistory();
+            const scored = [];
+            for (const item of linkData) {
+                const m = fuzzyMatch(item.text, query);
+                if (!m) continue;
+                let s = m.score;
+                if (history[item.href]) s += SCORE_HISTORY * Math.min(history[item.href], 10) / 10;
+                scored.push({ ...item, score: s, html: highlightText(item.text, m.indices) });
+            }
+            scored.sort((a, b) => b.score - a.score);
+            renderResults(scored.slice(0, 12));
+        };
+
+        cmdInput.addEventListener('input', () => search(cmdInput.value.trim()));
+
+        cmdInput.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape') {
+                cmdInput.value = '';
+                closeDropdown();
+                cmdInput.blur();
+                return;
+            }
+            if (e.key === 'Enter') {
+                if (activeIdx >= 0 && results[activeIdx]) {
+                    navigate(results[activeIdx].href);
+                }
+                return;
+            }
+            if (e.key === 'Tab' && results.length) {
+                e.preventDefault();
+                setActive(activeIdx + (e.shiftKey ? -1 : 1));
+                return;
+            }
+            if (e.key === 'ArrowDown') { e.preventDefault(); setActive(activeIdx + 1); }
+            else if (e.key === 'ArrowUp') { e.preventDefault(); setActive(activeIdx - 1); }
+        });
+
+        cmdResults.addEventListener('click', (e) => {
+            const li = e.target.closest('li');
+            if (!li) return;
+            const idx = +li.dataset.idx;
+            if (results[idx]) navigate(results[idx].href);
+        });
+
+        document.addEventListener('keydown', (e) => {
+            if (document.activeElement === cmdInput) return;
+            if (e.ctrlKey || e.altKey || e.metaKey) return;
+            if (e.key.length === 1) cmdInput.focus();
+        });
+
+        document.addEventListener('click', (e) => {
+            if (!e.target.closest('.cmd-bar')) closeDropdown();
+        });
 
         if ('serviceWorker' in navigator) {
             window.addEventListener('load', () => {
