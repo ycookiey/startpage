@@ -237,7 +237,7 @@
         }
         .update-banner {
             position: fixed;
-            bottom: 16px;
+            top: 16px;
             left: 50%;
             transform: translateX(-50%);
             background-color: var(--accent-color);
@@ -735,6 +735,11 @@
             }
             if (e.key === 'Enter') {
                 const q = cmdInput.value.trim();
+                if (updateAvailable && !q) {
+                    e.preventDefault();
+                    applyUpdate();
+                    return;
+                }
                 const prefix = getAiPrefix(q.toLowerCase());
                 if (prefix) {
                     cmdInput.value = q.slice(prefix.key.length + 1);
