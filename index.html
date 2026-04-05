@@ -232,6 +232,32 @@
                 transition: none;
             }
         }
+        .update-banner {
+            position: fixed;
+            bottom: 16px;
+            left: 50%;
+            transform: translateX(-50%);
+            background-color: var(--accent-color);
+            color: #fff;
+            padding: 8px 18px;
+            border-radius: 8px;
+            font-size: 0.85rem;
+            cursor: pointer;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+            z-index: 200;
+            display: none;
+            white-space: nowrap;
+        }
+        .update-banner.show {
+            display: block;
+        }
+        .update-banner kbd {
+            background: rgba(255,255,255,0.25);
+            border-radius: 3px;
+            padding: 1px 5px;
+            font-size: 0.75rem;
+            margin-left: 6px;
+        }
     </style>
 </head>
 <body>
@@ -355,6 +381,7 @@
             </div>
         </div>
     </main>
+    <div class="update-banner" id="updateBanner">新しいバージョンがあります<kbd>Enter</kbd></div>
 
     <script defer>
         const ICON_DEFAULT = '/favicons/default.svg';
@@ -758,6 +785,46 @@
                 navigator.serviceWorker.register('/sw.js');
             });
         }
+
+        // Version check
+        const VERSION_KEY = 'sp_version';
+        const updateBanner = document.getElementById('updateBanner');
+        let updateAvailable = false;
+
+        const applyUpdate = () => {
+            if (!updateAvailable) return;
+            caches.keys().then(names => Promise.all(names.map(n => caches.delete(n))))
+                .then(() => navigator.serviceWorker?.getRegistration())
+                .then(reg => reg?.unregister())
+                .then(() => location.reload());
+        };
+
+        updateBanner.addEventListener('click', applyUpdate);
+
+        defer(() => {
+            fetch('/version.json', { cache: 'no-store' })
+                .then(r => r.json())
+                .then(data => {
+                    const stored = localStorage.getItem(VERSION_KEY);
+                    if (!stored) {
+                        localStorage.setItem(VERSION_KEY, data.version);
+                        return;
+                    }
+                    if (stored !== data.version) {
+                        localStorage.setItem(VERSION_KEY, data.version);
+                        updateAvailable = true;
+                        updateBanner.classList.add('show');
+                    }
+                })
+                .catch(() => {});
+        });
+
+        document.addEventListener('keydown', (e) => {
+            if (updateAvailable && e.key === 'Enter' && document.activeElement !== cmdInput) {
+                e.preventDefault();
+                applyUpdate();
+            }
+        });
     </script>
 </body>
 </html>

@@ -1,4 +1,4 @@
-const CACHE_NAME = 'startpage-v3';
+const CACHE_NAME = 'startpage-v4';
 const ASSETS = [
   '/',
   '/index.html',
@@ -36,8 +36,8 @@ self.addEventListener('fetch', (event) => {
   const { request } = event;
   const url = new URL(request.url);
 
-  // Network-first for private redirects (API)
-  if (url.hostname === 'redirect.ycookiey.com') {
+  // Network-only for version check and private redirects
+  if (url.pathname === '/version.json' || url.hostname === 'redirect.ycookiey.com') {
     return;
   }
 
