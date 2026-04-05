@@ -1,0 +1,23 @@
+#!/bin/sh
+
+# version.json bump check
+# index.html or sw.js is staged but version.json is not → warn
+
+staged=$(git diff --cached --name-only)
+
+has_app_change=false
+has_version_bump=false
+
+for f in $staged; do
+    case "$f" in
+        index.html|sw.js) has_app_change=true ;;
+        version.json) has_version_bump=true ;;
+    esac
+done
+
+if [ "$has_app_change" = true ] && [ "$has_version_bump" = false ]; then
+    echo "⚠ index.html or sw.js changed without bumping version.json"
+    echo "  Run: echo '{\"version\":\"N\"}' > version.json"
+    echo "  To skip: git commit --no-verify"
+    exit 1
+fi
