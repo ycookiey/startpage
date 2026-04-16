@@ -1,4 +1,5 @@
-const CACHE_NAME = 'startpage-v4';
+const VERSION = 9;
+const CACHE_NAME = `startpage-v${VERSION}`;
 const ASSETS = [
   '/',
   '/index.html',
@@ -7,12 +8,11 @@ const ASSETS = [
   '/favicons/default.svg'
 ];
 
-// Install: Cache core assets
+// Install: Cache core assets (no skipWaiting — wait for user confirmation)
 self.addEventListener('install', (event) => {
   event.waitUntil(
     caches.open(CACHE_NAME)
       .then((cache) => cache.addAll(ASSETS))
-      .then(() => self.skipWaiting())
   );
 });
 
@@ -29,6 +29,13 @@ self.addEventListener('activate', (event) => {
       );
     }).then(() => self.clients.claim())
   );
+});
+
+// Allow page to trigger activation of waiting worker
+self.addEventListener('message', (event) => {
+  if (event.data?.type === 'SKIP_WAITING') {
+    self.skipWaiting();
+  }
 });
 
 // Fetch: Cache-first for same-origin assets, skip private redirects

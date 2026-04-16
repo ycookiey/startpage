@@ -799,29 +799,61 @@
             if (!e.target.closest('.cmd-bar')) closeDropdown();
         });
 
-        if ('serviceWorker' in navigator) {
-            window.addEventListener('load', () => {
-                navigator.serviceWorker.register('/sw.js');
-            });
-        }
-
-        // Version check
+        // Update notification
         const VERSION_KEY = 'sp_version';
         const updateBanner = document.getElementById('updateBanner');
         let updateAvailable = false;
+        let waitingWorker = null;
+
+        const showUpdate = () => {
+            updateAvailable = true;
+            updateBanner.classList.add('show');
+        };
 
         const applyUpdate = () => {
             if (!updateAvailable) return;
-            caches.keys().then(names => Promise.all(names.map(n => caches.delete(n))))
-                .then(() => navigator.serviceWorker?.getRegistration())
-                .then(reg => reg?.unregister())
-                .then(() => location.reload());
+            if (waitingWorker) {
+                waitingWorker.postMessage({ type: 'SKIP_WAITING' });
+            } else {
+                caches.keys().then(names => Promise.all(names.map(n => caches.delete(n))))
+                    .then(() => location.reload());
+            }
         };
 
         updateBanner.addEventListener('click', applyUpdate);
 
+        if ('serviceWorker' in navigator) {
+            let refreshing = false;
+            navigator.serviceWorker.addEventListener('controllerchange', () => {
+                if (refreshing) return;
+                refreshing = true;
+                location.reload();
+            });
+
+            window.addEventListener('load', async () => {
+                const reg = await navigator.serviceWorker.register('/sw.js');
+
+                const onNewWorker = (worker) => {
+                    if (worker.state === 'installed' && navigator.serviceWorker.controller) {
+                        waitingWorker = worker;
+                        showUpdate();
+                    }
+                };
+
+                if (reg.waiting) {
+                    onNewWorker(reg.waiting);
+                }
+
+                reg.addEventListener('updatefound', () => {
+                    const worker = reg.installing;
+                    worker.addEventListener('statechange', () => onNewWorker(worker));
+                });
+            });
+        }
+
+        // Fallback: version.json check (covers non-SW browsers & sw.js unchanged deploys)
         defer(() => {
-            fetch('/version.json', { cache: 'no-store' })
+            fetch('/version.json?t=' + Date.now(), { cache: 'no-store' })
                 .then(r => r.json())
                 .then(data => {
                     const stored = localStorage.getItem(VERSION_KEY);
@@ -831,8 +863,7 @@
                     }
                     if (stored !== data.version) {
                         localStorage.setItem(VERSION_KEY, data.version);
-                        updateAvailable = true;
-                        updateBanner.classList.add('show');
+                        if (!updateAvailable) showUpdate();
                     }
                 })
                 .catch(() => {});

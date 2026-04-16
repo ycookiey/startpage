@@ -21,3 +21,14 @@ if [ "$has_app_change" = true ] && [ "$has_version_bump" = false ]; then
     echo "  To skip: git commit --no-verify"
     exit 1
 fi
+
+# sw.js VERSION must match version.json
+if [ "$has_version_bump" = true ]; then
+    ver_json=$(git show :version.json | sed -n 's/.*"version".*"\([^"]*\)".*/\1/p')
+    ver_sw=$(git show :sw.js | sed -n 's/^const VERSION = \([0-9]*\);/\1/p')
+    if [ -n "$ver_json" ] && [ -n "$ver_sw" ] && [ "$ver_json" != "$ver_sw" ]; then
+        echo "⚠ sw.js VERSION ($ver_sw) does not match version.json ($ver_json)"
+        echo "  Update sw.js: const VERSION = $ver_json;"
+        exit 1
+    fi
+fi
