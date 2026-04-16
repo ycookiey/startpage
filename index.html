@@ -265,7 +265,7 @@
 </head>
 <body>
     <div class="cmd-bar">
-        <input class="cmd-input" id="cmdInput" type="text" placeholder="リンクを検索…" autocomplete="off" autofocus>
+        <input class="cmd-input" id="cmdInput" type="text" placeholder="リンクを検索 / Google検索" autocomplete="off" autofocus>
         <ul class="cmd-results" id="cmdResults"></ul>
     </div>
     <main>
@@ -749,6 +749,8 @@
                 }
                 if (activeIdx >= 0 && results[activeIdx]) {
                     navigate(results[activeIdx].href);
+                } else if (q) {
+                    window.location.href = 'https://www.google.com/search?q=' + encodeURIComponent(q);
                 }
                 return;
             }
