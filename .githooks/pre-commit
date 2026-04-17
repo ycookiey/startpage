@@ -1,34 +1,47 @@
 #!/bin/sh
 
-# version.json bump check
-# index.html or sw.js is staged but version.json is not → warn
+# Pre-commit checks for version consistency.
+# Reports all issues at once so fixes can be made in a single pass.
 
 staged=$(git diff --cached --name-only)
 
-has_app_change=false
-has_version_bump=false
+has_app=false
+has_bump=false
+has_sw=false
 
 for f in $staged; do
     case "$f" in
-        index.html|sw.js) has_app_change=true ;;
-        version.json) has_version_bump=true ;;
+        index.html) has_app=true ;;
+        sw.js) has_app=true; has_sw=true ;;
+        version.json) has_bump=true ;;
     esac
 done
 
-if [ "$has_app_change" = true ] && [ "$has_version_bump" = false ]; then
+get() { git show :"$1" 2>/dev/null || git show HEAD:"$1" 2>/dev/null; }
+ver_json=$(get version.json | sed -n 's/.*"version".*"\([^"]*\)".*/\1/p')
+ver_sw=$(get sw.js | sed -n 's/^const VERSION = \([0-9]*\);.*/\1/p')
+
+errors=0
+
+if [ "$has_app" = true ] && [ "$has_bump" = false ]; then
+    next=$((ver_json + 1))
     echo "⚠ index.html or sw.js changed without bumping version.json"
-    echo "  Run: echo '{\"version\":\"N\"}' > version.json"
+    echo "  Run: echo '{\"version\":\"$next\"}' > version.json"
+    if [ "$has_sw" = false ] || [ "$ver_sw" != "$next" ]; then
+        echo "  Also update sw.js: const VERSION = $next;"
+    fi
+    errors=1
+fi
+
+if [ "$has_bump" = true ] && [ -n "$ver_json" ] && [ -n "$ver_sw" ] && [ "$ver_json" != "$ver_sw" ]; then
+    echo "⚠ sw.js VERSION ($ver_sw) does not match version.json ($ver_json)"
+    echo "  Update sw.js: const VERSION = $ver_json;"
+    errors=1
+fi
+
+if [ "$errors" = 1 ]; then
     echo "  To skip: git commit --no-verify"
     exit 1
 fi
 
-# sw.js VERSION must match version.json
-if [ "$has_version_bump" = true ]; then
-    ver_json=$(git show :version.json | sed -n 's/.*"version".*"\([^"]*\)".*/\1/p')
-    ver_sw=$(git show :sw.js | sed -n 's/^const VERSION = \([0-9]*\);/\1/p')
-    if [ -n "$ver_json" ] && [ -n "$ver_sw" ] && [ "$ver_json" != "$ver_sw" ]; then
-        echo "⚠ sw.js VERSION ($ver_sw) does not match version.json ($ver_json)"
-        echo "  Update sw.js: const VERSION = $ver_json;"
-        exit 1
-    fi
-fi
+exit 0
