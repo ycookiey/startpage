@@ -528,6 +528,67 @@
             const sectionName = section ? section.querySelector('h2')?.textContent || '' : '';
             return { text: a.textContent, href: a.getAttribute('href'), section: sectionName, el: a };
         });
+
+        const ROMAJI_KANA = {
+            kya:'きゃ',kyu:'きゅ',kyo:'きょ',sha:'しゃ',shu:'しゅ',sho:'しょ',shi:'し',she:'しぇ',
+            cha:'ちゃ',chu:'ちゅ',cho:'ちょ',chi:'ち',che:'ちぇ',tsu:'つ',
+            nya:'にゃ',nyu:'にゅ',nyo:'にょ',hya:'ひゃ',hyu:'ひゅ',hyo:'ひょ',
+            mya:'みゃ',myu:'みゅ',myo:'みょ',rya:'りゃ',ryu:'りゅ',ryo:'りょ',
+            gya:'ぎゃ',gyu:'ぎゅ',gyo:'ぎょ',ja:'じゃ',ju:'じゅ',jo:'じょ',ji:'じ',je:'じぇ',
+            jya:'じゃ',jyu:'じゅ',jyo:'じょ',bya:'びゃ',byu:'びゅ',byo:'びょ',
+            pya:'ぴゃ',pyu:'ぴゅ',pyo:'ぴょ',
+            fa:'ふぁ',fi:'ふぃ',fe:'ふぇ',fo:'ふぉ',fu:'ふ',
+            va:'ゔぁ',vi:'ゔぃ',ve:'ゔぇ',vo:'ゔぉ',vu:'ゔ',
+            xa:'ぁ',xi:'ぃ',xu:'ぅ',xe:'ぇ',xo:'ぉ',
+            la:'ぁ',li:'ぃ',lu:'ぅ',le:'ぇ',lo:'ぉ',
+            xya:'ゃ',xyu:'ゅ',xyo:'ょ',lya:'ゃ',lyu:'ゅ',lyo:'ょ',
+            ltu:'っ',xtu:'っ',ltsu:'っ',xtsu:'っ',
+            wha:'うぁ',whi:'うぃ',whe:'うぇ',who:'うぉ',
+            ka:'か',ki:'き',ku:'く',ke:'け',ko:'こ',
+            sa:'さ',si:'し',su:'す',se:'せ',so:'そ',
+            ta:'た',ti:'ち',tu:'つ',te:'て',to:'と',
+            na:'な',ni:'に',nu:'ぬ',ne:'ね',no:'の',
+            ha:'は',hi:'ひ',hu:'ふ',he:'へ',ho:'ほ',
+            ma:'ま',mi:'み',mu:'む',me:'め',mo:'も',
+            ya:'や',yu:'ゆ',yo:'よ',
+            ra:'ら',ri:'り',ru:'る',re:'れ',ro:'ろ',
+            wa:'わ',wi:'ゐ',we:'ゑ',wo:'を',
+            ga:'が',gi:'ぎ',gu:'ぐ',ge:'げ',go:'ご',
+            za:'ざ',zi:'じ',zu:'ず',ze:'ぜ',zo:'ぞ',
+            da:'だ',di:'ぢ',du:'づ',de:'で',do:'ど',
+            ba:'ば',bi:'び',bu:'ぶ',be:'べ',bo:'ぼ',
+            pa:'ぱ',pi:'ぴ',pu:'ぷ',pe:'ぺ',po:'ぽ',
+            nn:'ん',
+            a:'あ',i:'い',u:'う',e:'え',o:'お',n:'ん',
+        };
+        const HIRAGANA_RE = /[\u3041-\u3096ー]/;
+        const toKana = (text) => {
+            const s = text.toLowerCase();
+            let out = '', i = 0;
+            while (i < s.length) {
+                let matched = false;
+                for (let len = 4; len >= 1; len--) {
+                    if (i + len > s.length) continue;
+                    const chunk = s.slice(i, i + len);
+                    if (ROMAJI_KANA[chunk]) {
+                        out += ROMAJI_KANA[chunk];
+                        i += len;
+                        matched = true;
+                        break;
+                    }
+                }
+                if (!matched) { out += s[i]; i++; }
+            }
+            return out;
+        };
+        let kanaIndexBuilt = false;
+        const buildKanaIndex = () => {
+            if (kanaIndexBuilt) return;
+            for (const item of linkData) item.kana = toKana(item.text);
+            kanaIndexBuilt = true;
+        };
+        defer(buildKanaIndex);
+
         const getIcon = (item) => {
             const logo = item.el.querySelector('.logo');
             return (logo && logo.classList.contains('logo--loaded')) ? logo.src : ICON_DEFAULT;
@@ -692,12 +753,19 @@
             }
             const history = getHistory();
             const scored = [];
+            const hasKana = HIRAGANA_RE.test(query);
+            if (hasKana && !kanaIndexBuilt) buildKanaIndex();
             for (const item of linkData) {
-                const m = fuzzyMatch(item.text, query);
+                let m = fuzzyMatch(item.text, query);
+                let indices = m ? m.indices : [];
+                if (!m && hasKana && item.kana) {
+                    const km = fuzzyMatch(item.kana, query);
+                    if (km) { m = km; indices = []; }
+                }
                 if (!m) continue;
                 let s = m.score;
                 if (history[item.href]) s += SCORE_HISTORY * Math.min(history[item.href], 10) / 10;
-                scored.push({ ...item, score: s, html: highlightText(item.text, m.indices) });
+                scored.push({ ...item, score: s, html: highlightText(item.text, indices) });
             }
             scored.sort((a, b) => b.score - a.score);
             renderResults(scored.slice(0, 12));
