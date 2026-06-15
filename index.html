@@ -591,8 +591,24 @@
         defer(buildKanaIndex);
 
         const getIcon = (item) => {
+            if (!item.el) return ICON_DEFAULT;
             const logo = item.el.querySelector('.logo');
             return (logo && logo.classList.contains('logo--loaded')) ? logo.src : ICON_DEFAULT;
+        };
+
+        const URL_SCHEME_RE = /^[a-z][a-z0-9+.-]+:\/\//i;
+        const URL_HOST_RE = /^(?:[a-z0-9-]+(?:\.[a-z0-9-]+)*\.[a-z]{2,24}|localhost|\d{1,3}(?:\.\d{1,3}){3})(?::\d+)?(?:[\/?#].*)?$/i;
+        const parseUrlInput = (q) => {
+            if (!q || /\s/.test(q)) return null;
+            if (URL_SCHEME_RE.test(q)) {
+                if (/^javascript:/i.test(q)) return null;
+                return { href: q };
+            }
+            if (URL_HOST_RE.test(q)) {
+                const href = 'https://' + q;
+                return { href };
+            }
+            return null;
         };
 
         const isBoundary = (text, i) =>
@@ -694,8 +710,8 @@
             li.scrollIntoView({ block: 'nearest' });
         };
 
-        const navigate = (href) => {
-            recordVisit(href);
+        const navigate = (href, skipHistory) => {
+            if (!skipHistory) recordVisit(href);
             window.location.href = href;
         };
 
@@ -769,7 +785,17 @@
                 scored.push({ ...item, score: s, html: highlightText(item.text, indices) });
             }
             scored.sort((a, b) => b.score - a.score);
-            renderResults(scored.slice(0, 12));
+            const items = scored.slice(0, 12);
+            const urlCandidate = parseUrlInput(q);
+            if (urlCandidate) {
+                items.unshift({
+                    href: urlCandidate.href,
+                    section: 'URL',
+                    isUrl: true,
+                    html: highlightText(urlCandidate.href, []),
+                });
+            }
+            renderResults(items);
         };
 
         cmdInput.addEventListener('input', () => search(cmdInput.value.trim()));
@@ -818,7 +844,8 @@
                     return;
                 }
                 if (activeIdx >= 0 && results[activeIdx]) {
-                    navigate(results[activeIdx].href);
+                    const item = results[activeIdx];
+                    navigate(item.href, item.isUrl);
                 } else if (q) {
                     window.location.href = 'https://www.google.com/search?q=' + encodeURIComponent(q);
                 }
@@ -842,7 +869,10 @@
                 return;
             }
             const idx = +li.dataset.idx;
-            if (results[idx]) navigate(results[idx].href);
+            if (results[idx]) {
+                const item = results[idx];
+                navigate(item.href, item.isUrl);
+            }
         });
 
         document.addEventListener('keydown', (e) => {
