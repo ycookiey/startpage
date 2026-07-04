@@ -1,11 +1,12 @@
-const VERSION = 13;
+const VERSION = 14;
 const CACHE_NAME = `startpage-v${VERSION}`;
 const ASSETS = [
   '/',
   '/index.html',
   '/manifest.json',
   '/icon.svg',
-  '/favicons/default.svg'
+  '/favicons/default.svg',
+  '/fonts/fraunces-latin.woff2'
 ];
 
 // Install: Cache core assets (no skipWaiting — wait for user confirmation)
