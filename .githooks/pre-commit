@@ -1,6 +1,9 @@
 #!/bin/sh
 
 # Pre-commit checks for version consistency.
+# Version bump is required once per branch (compared against upstream/main),
+# not per commit — a single PR bumps version.json once regardless of how
+# many commits touch index.html or sw.js.
 # Reports all issues at once so fixes can be made in a single pass.
 
 staged=$(git diff --cached --name-only)
@@ -18,14 +21,25 @@ for f in $staged; do
 done
 
 get() { git show :"$1" 2>/dev/null || git show HEAD:"$1" 2>/dev/null; }
-ver_json=$(get version.json | sed -n 's/.*"version".*"\([^"]*\)".*/\1/p')
+extract_ver() { sed -n 's/.*"version".*"\([^"]*\)".*/\1/p'; }
+ver_json=$(get version.json | extract_ver)
 ver_sw=$(get sw.js | sed -n 's/^const VERSION = \([0-9]*\);.*/\1/p')
+
+# Baseline version to compare against — a branch is "already bumped" if the
+# current version differs from this baseline, regardless of which commit did it.
+base_ref=$(git rev-parse --verify --quiet '@{upstream}' \
+        || git rev-parse --verify --quiet origin/main \
+        || git rev-parse --verify --quiet main)
+base_ver=""
+if [ -n "$base_ref" ]; then
+    base_ver=$(git show "$base_ref:version.json" 2>/dev/null | extract_ver)
+fi
 
 errors=0
 
-if [ "$has_app" = true ] && [ "$has_bump" = false ]; then
+if [ "$has_app" = true ] && [ "$has_bump" = false ] && [ -n "$base_ver" ] && [ "$ver_json" = "$base_ver" ]; then
     next=$((ver_json + 1))
-    echo "⚠ index.html or sw.js changed without bumping version.json"
+    echo "⚠ index.html or sw.js changed without bumping version.json on this branch"
     echo "  Run: echo '{\"version\":\"$next\"}' > version.json"
     if [ "$has_sw" = false ] || [ "$ver_sw" != "$next" ]; then
         echo "  Also update sw.js: const VERSION = $next;"
