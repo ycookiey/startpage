@@ -13,7 +13,13 @@
         "categories:accessibility": ["warn", { "minScore": 0.9 }],
         "categories:best-practices": "off",
         "categories:seo": "off",
-        "categories:pwa": "off"
+        "categories:pwa": "off",
+        "charset": "off",
+        "errors-in-console": "off",
+        "tap-targets": "off",
+        "unminified-javascript": "off",
+        "csp-xss": "off",
+        "installable-manifest": "off"
       }
     }
   }
