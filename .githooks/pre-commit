@@ -16,6 +16,7 @@ for f in $staged; do
     case "$f" in
         index.html) has_app=true ;;
         sw.js) has_app=true; has_sw=true ;;
+        yfuzzy.min.js) has_app=true ;;
         version.json) has_bump=true ;;
     esac
 done
@@ -36,6 +37,14 @@ if [ -n "$base_ref" ]; then
 fi
 
 errors=0
+
+# yfuzzy.min.js is a generated asset referenced by index.html and sw.js;
+# a commit that leaves it untracked ships a page whose search cannot load.
+if ! git ls-files --error-unmatch yfuzzy.min.js >/dev/null 2>&1; then
+    echo "⚠ yfuzzy.min.js is not tracked (index.html and sw.js reference it)"
+    echo "  Run: git add yfuzzy.min.js"
+    errors=1
+fi
 
 if [ "$has_app" = true ] && [ "$has_bump" = false ] && [ -n "$base_ver" ] && [ "$ver_json" = "$base_ver" ]; then
     next=$((ver_json + 1))
