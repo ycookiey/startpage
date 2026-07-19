@@ -41,14 +41,24 @@ pwsh ./scripts/fetch-favicons.ps1
 pwsh ./scripts/fetch-favicons.ps1 -Provider duckduckgo
 ```
 
-### 3. ローカル確認
+### 3. 検索ライブラリ (yfuzzy) の更新
+リンク検索は [@ycookiey/yfuzzy](https://github.com/ycookiey/yfuzzy) 同梱のブラウザ向けバンドル `yfuzzy.min.js` を使用しています。
+最新版に取得し直すには以下を実行します (使用中のバージョンはファイル先頭のコメントで確認できます)。
+
+```bash
+curl -Lo yfuzzy.min.js https://unpkg.com/@ycookiey/yfuzzy/dist/yfuzzy.min.js
+```
+
+`sw.js` のプリキャッシュ対象のため、更新時は `version.json` / `sw.js` のバージョンも上げます (pre-commit hook が検知します)。
+
+### 4. ローカル確認
 Node.jsが必要です。
 ```bash
 npx serve .
 ```
 `http://localhost:3000` で確認できます。
 
-### 4. デプロイ
+### 5. デプロイ
 ```bash
 npx wrangler pages deploy . --project-name startpage --branch main
 ```

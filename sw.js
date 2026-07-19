@@ -1,8 +1,9 @@
-const VERSION = 14;
+const VERSION = 15;
 const CACHE_NAME = `startpage-v${VERSION}`;
 const ASSETS = [
   '/',
   '/index.html',
+  '/yfuzzy.min.js',
   '/manifest.json',
   '/icon.svg',
   '/favicons/default.svg',

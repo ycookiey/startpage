@@ -515,6 +515,7 @@
 
     <div class="update-banner" id="updateBanner">新しいバージョンがあります<kbd>Enter</kbd></div>
 
+    <script src="/yfuzzy.min.js" defer></script>
     <script defer>
         const ICON_DEFAULT = '/favicons/default.svg';
         const ICON_EXTS = ['.png', '.svg', '.ico'];
@@ -580,13 +581,7 @@
         defer(resolveAiIcons);
 
         const HISTORY_KEY = 'sp_history';
-        const SCORE_EXACT = 100;
-        const SCORE_PREFIX = 40;
-        const SCORE_BOUNDARY = 20;
-        const SCORE_CONSECUTIVE = 15;
-        const SCORE_POSITION = 10;
-        const SCORE_SHORT = 5;
-        const SCORE_HISTORY = 30;
+        const SCORE_HISTORY = 0.2; // 加点は同一 tier 内の順位にのみ影響 (ソートは tier 優先)
 
         const getHistory = () => {
             try { return JSON.parse(localStorage.getItem(HISTORY_KEY) || '{}'); }
@@ -616,65 +611,12 @@
         };
         if (!navigator.connection || !navigator.connection.saveData) defer(loadDeferredIcons);
 
-        const ROMAJI_KANA = {
-            kya:'きゃ',kyu:'きゅ',kyo:'きょ',sha:'しゃ',shu:'しゅ',sho:'しょ',shi:'し',she:'しぇ',
-            cha:'ちゃ',chu:'ちゅ',cho:'ちょ',chi:'ち',che:'ちぇ',tsu:'つ',
-            nya:'にゃ',nyu:'にゅ',nyo:'にょ',hya:'ひゃ',hyu:'ひゅ',hyo:'ひょ',
-            mya:'みゃ',myu:'みゅ',myo:'みょ',rya:'りゃ',ryu:'りゅ',ryo:'りょ',
-            gya:'ぎゃ',gyu:'ぎゅ',gyo:'ぎょ',ja:'じゃ',ju:'じゅ',jo:'じょ',ji:'じ',je:'じぇ',
-            jya:'じゃ',jyu:'じゅ',jyo:'じょ',bya:'びゃ',byu:'びゅ',byo:'びょ',
-            pya:'ぴゃ',pyu:'ぴゅ',pyo:'ぴょ',
-            fa:'ふぁ',fi:'ふぃ',fe:'ふぇ',fo:'ふぉ',fu:'ふ',
-            va:'ゔぁ',vi:'ゔぃ',ve:'ゔぇ',vo:'ゔぉ',vu:'ゔ',
-            xa:'ぁ',xi:'ぃ',xu:'ぅ',xe:'ぇ',xo:'ぉ',
-            la:'ぁ',li:'ぃ',lu:'ぅ',le:'ぇ',lo:'ぉ',
-            xya:'ゃ',xyu:'ゅ',xyo:'ょ',lya:'ゃ',lyu:'ゅ',lyo:'ょ',
-            ltu:'っ',xtu:'っ',ltsu:'っ',xtsu:'っ',
-            wha:'うぁ',whi:'うぃ',whe:'うぇ',who:'うぉ',
-            ka:'か',ki:'き',ku:'く',ke:'け',ko:'こ',
-            sa:'さ',si:'し',su:'す',se:'せ',so:'そ',
-            ta:'た',ti:'ち',tu:'つ',te:'て',to:'と',
-            na:'な',ni:'に',nu:'ぬ',ne:'ね',no:'の',
-            ha:'は',hi:'ひ',hu:'ふ',he:'へ',ho:'ほ',
-            ma:'ま',mi:'み',mu:'む',me:'め',mo:'も',
-            ya:'や',yu:'ゆ',yo:'よ',
-            ra:'ら',ri:'り',ru:'る',re:'れ',ro:'ろ',
-            wa:'わ',wi:'ゐ',we:'ゑ',wo:'を',
-            ga:'が',gi:'ぎ',gu:'ぐ',ge:'げ',go:'ご',
-            za:'ざ',zi:'じ',zu:'ず',ze:'ぜ',zo:'ぞ',
-            da:'だ',di:'ぢ',du:'づ',de:'で',do:'ど',
-            ba:'ば',bi:'び',bu:'ぶ',be:'べ',bo:'ぼ',
-            pa:'ぱ',pi:'ぴ',pu:'ぷ',pe:'ぺ',po:'ぽ',
-            nn:'ん',
-            a:'あ',i:'い',u:'う',e:'え',o:'お',n:'ん',
+        let linkIndex = null;
+        const getLinkIndex = () => {
+            if (typeof yfuzzy === 'undefined') return null; // bundle ロード失敗/未完了時は検索を縮退 (AI 項目と URL 遷移のみ)
+            return (linkIndex ??= yfuzzy.createIndex(linkData, { getText: (item) => item.text }));
         };
-        const HIRAGANA_RE = /[ぁ-ゖー]/;
-        const toKana = (text) => {
-            const s = text.toLowerCase();
-            let out = '', i = 0;
-            while (i < s.length) {
-                let matched = false;
-                for (let len = 4; len >= 1; len--) {
-                    if (i + len > s.length) continue;
-                    const chunk = s.slice(i, i + len);
-                    if (ROMAJI_KANA[chunk]) {
-                        out += ROMAJI_KANA[chunk];
-                        i += len;
-                        matched = true;
-                        break;
-                    }
-                }
-                if (!matched) { out += s[i]; i++; }
-            }
-            return out;
-        };
-        let kanaIndexBuilt = false;
-        const buildKanaIndex = () => {
-            if (kanaIndexBuilt) return;
-            for (const item of linkData) item.kana = toKana(item.text);
-            kanaIndexBuilt = true;
-        };
-        defer(buildKanaIndex);
+        defer(getLinkIndex);
 
         const getIcon = (item) => item.icon || ICON_DEFAULT;
 
@@ -693,49 +635,14 @@
             return null;
         };
 
-        const isBoundary = (text, i) =>
-            i === 0 ||
-            text[i - 1] === ' ' || text[i - 1] === '-' || text[i - 1] === '_' || text[i - 1] === '/' ||
-            (text[i] !== text[i].toLowerCase() && text[i - 1] === text[i - 1].toLowerCase());
-
-        const fuzzyMatch = (text, query) => {
-            const lower = text.toLowerCase();
-            const indices = [];
-            const exactPos = lower.indexOf(query);
-            if (exactPos >= 0) {
-                for (let i = exactPos; i < exactPos + query.length; i++) indices.push(i);
-                let s = SCORE_EXACT;
-                if (exactPos === 0) s += SCORE_PREFIX;
-                return { score: s, indices };
-            }
-            let qi = 0, score = 0, consecutive = 0, firstMatch = -1;
-            for (let i = 0; i < lower.length && qi < query.length; i++) {
-                if (lower[i] === query[qi]) {
-                    indices.push(i);
-                    if (firstMatch < 0) firstMatch = i;
-                    if (isBoundary(text, i)) score += SCORE_BOUNDARY;
-                    consecutive++;
-                    if (consecutive > 1) score += SCORE_CONSECUTIVE;
-                    qi++;
-                } else {
-                    consecutive = 0;
-                }
-            }
-            if (qi < query.length) return null;
-            score += SCORE_POSITION * (1 - firstMatch / lower.length);
-            score += SCORE_SHORT * (1 / lower.length);
-            return { score, indices };
-        };
-
         const escHtml = (s) => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
-        const highlightText = (text, indices) => {
-            const set = new Set(indices);
-            let html = '';
-            for (let i = 0; i < text.length; i++) {
-                const ch = text[i].replace(/&/g, '&amp;').replace(/</g, '&lt;');
-                html += set.has(i) ? `<span class="match">${ch}</span>` : ch;
+        const highlightText = (text, ranges) => {
+            let html = '', pos = 0;
+            for (const [start, end] of ranges) {
+                html += escHtml(text.slice(pos, start)) + `<span class="match">${escHtml(text.slice(start, end))}</span>`;
+                pos = end;
             }
-            return html;
+            return html + escHtml(text.slice(pos));
         };
 
         const openDropdown = () => {
@@ -865,23 +772,13 @@
                 return;
             }
             const history = getHistory();
-            const scored = [];
-            const hasKana = HIRAGANA_RE.test(query);
-            if (hasKana && !kanaIndexBuilt) buildKanaIndex();
-            for (const item of linkData) {
-                let m = fuzzyMatch(item.text, query);
-                let indices = m ? m.indices : [];
-                if (!m && hasKana && item.kana) {
-                    const km = fuzzyMatch(item.kana, query);
-                    if (km) { m = km; indices = []; }
-                }
-                if (!m) continue;
-                let s = m.score;
-                if (history[item.href]) s += SCORE_HISTORY * Math.min(history[item.href], 10) / 10;
-                scored.push({ ...item, score: s, html: highlightText(item.text, indices) });
-            }
-            scored.sort((a, b) => b.score - a.score);
-            const items = scored.slice(0, 12);
+            const historyBonus = (href) => history[href] ? SCORE_HISTORY * Math.min(history[href], 10) / 10 : 0;
+            const index = getLinkIndex();
+            let hits = index ? index.search(q, { includeMatches: true }) : [];
+            if (hits.some((r) => r.tier <= 2)) hits = hits.filter((r) => r.tier <= 2); // 誤字許容 (tier 3) は上位一致が無い時だけ提示
+            const scored = hits.map((r) => ({ item: r.item, tier: r.tier, matches: r.matches || [], score: r.score + historyBonus(r.item.href) }));
+            scored.sort((a, b) => (a.tier - b.tier) || (b.score - a.score));
+            const items = scored.slice(0, 12).map((s) => ({ ...s.item, score: s.score, html: highlightText(s.item.text, s.matches) }));
             const urlCandidate = parseUrlInput(q);
             if (urlCandidate) {
                 items.unshift({
