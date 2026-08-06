@@ -1,4 +1,4 @@
-const VERSION = 16;
+const VERSION = 17;
 const CACHE_NAME = `startpage-v${VERSION}`;
 const ASSETS = [
   '/',
