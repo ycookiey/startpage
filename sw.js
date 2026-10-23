@@ -1,4 +1,4 @@
-const VERSION = 21;
+const VERSION = 22;
 const CACHE_NAME = `startpage-v${VERSION}`;
 const ASSETS = [
   '/',
@@ -10,7 +10,7 @@ const ASSETS = [
   '/fonts/fraunces-latin.woff2'
 ];
 
-// Install: Cache core assets (no skipWaiting — wait for user confirmation)
+// No skipWaiting on install: the page activates a new worker only after the user confirms the update
 self.addEventListener('install', (event) => {
   event.waitUntil(
     caches.open(CACHE_NAME)
@@ -18,7 +18,6 @@ self.addEventListener('install', (event) => {
   );
 });
 
-// Activate: Clean up old caches
 self.addEventListener('activate', (event) => {
   event.waitUntil(
     caches.keys().then((cacheNames) => {
@@ -33,19 +32,17 @@ self.addEventListener('activate', (event) => {
   );
 });
 
-// Allow page to trigger activation of waiting worker
 self.addEventListener('message', (event) => {
   if (event.data?.type === 'SKIP_WAITING') {
     self.skipWaiting();
   }
 });
 
-// Fetch: Cache-first for same-origin assets, skip private redirects
 self.addEventListener('fetch', (event) => {
   const { request } = event;
   const url = new URL(request.url);
 
-  // Network-only for version check and private redirects
+  // version.json must come from the network to detect a new deployment, and private redirects must reach the sign-in check
   if (url.pathname === '/version.json' || url.hostname === 'redirect.ycookiey.com') {
     return;
   }
