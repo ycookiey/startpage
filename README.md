@@ -1,6 +1,6 @@
 # Start Page
 
-[日本語](README.ja.md)
+[日本語版 README](README.ja.md)
 
 The author's browser start page, served at <https://sp.ycookiey.com> from Cloudflare Pages. This repository holds the page itself, including the author's links.
 

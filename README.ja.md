@@ -1,6 +1,6 @@
 # Start Page
 
-[English](README.md)
+[English README](README.md)
 
 作者のブラウザのスタートページ。<https://sp.ycookiey.com>でCloudflare Pagesから配信している。このリポジトリは作者のリンクを含むページそのもの。
 
