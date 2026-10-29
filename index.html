@@ -341,7 +341,6 @@
         </div>
 
         <main>
-            <!-- Top: grouped, no section title -->
             <section class="section section--top" data-title="top">
                 <div class="section__grid">
                     <div class="group" data-label="AI">
@@ -502,7 +501,7 @@
                         </ul>
                     </div>
 
-                    <!-- Hidden: search-only links -->
+                    <!-- Hidden on the page; the command bar still searches these links -->
                     <div class="rest-section hidden" data-title="hidden">
                         <h2 class="section-title">hidden</h2>
                         <ul class="link-list">
@@ -564,7 +563,6 @@
             else setTimeout(cb, 400);
         };
 
-        // Command bar
         const cmdInput = document.getElementById('cmdInput');
         const cmdResults = document.getElementById('cmdResults');
         const mainEl = document.querySelector('main');
@@ -586,7 +584,7 @@
         defer(resolveAiIcons);
 
         const HISTORY_KEY = 'sp_history';
-        const SCORE_HISTORY = 0.2; // 加点は同一 tier 内の順位にのみ影響 (ソートは tier 優先)
+        const SCORE_HISTORY = 0.2; // Reorders hits only within a tier, because the sort compares tier first
 
         const getHistory = () => {
             try { return JSON.parse(localStorage.getItem(HISTORY_KEY) || '{}'); }
@@ -618,7 +616,7 @@
 
         let linkIndex = null;
         const getLinkIndex = () => {
-            if (typeof yfuzzy === 'undefined') return null; // bundle ロード失敗/未完了時は検索を縮退 (AI 項目と URL 遷移のみ)
+            if (typeof yfuzzy === 'undefined') return null; // Until the bundle loads, or if it fails to load, only the AI items and URL navigation work
             return (linkIndex ??= yfuzzy.createIndex(linkData, { getText: (item) => item.text }));
         };
         defer(getLinkIndex);
@@ -780,7 +778,7 @@
             const historyBonus = (href) => history[href] ? SCORE_HISTORY * Math.min(history[href], 10) / 10 : 0;
             const index = getLinkIndex();
             let hits = index ? index.search(q, { includeMatches: true }) : [];
-            if (hits.some((r) => r.tier <= 2)) hits = hits.filter((r) => r.tier <= 2); // 誤字許容 (tier 3) は上位一致が無い時だけ提示
+            if (hits.some((r) => r.tier <= 2)) hits = hits.filter((r) => r.tier <= 2); // Typo-tolerant hits (tier 3) are noise when a closer match exists
             const scored = hits.map((r) => ({ item: r.item, tier: r.tier, matches: r.matches || [], score: r.score + historyBonus(r.item.href) }));
             scored.sort((a, b) => (a.tier - b.tier) || (b.score - a.score));
             const items = scored.slice(0, 12).map((s) => ({ ...s.item, score: s.score, html: highlightText(s.item.text, s.matches) }));
@@ -899,7 +897,6 @@
             closeDropdown();
         });
 
-        // Update notification
         const VERSION_KEY = 'sp_version';
         const updateBanner = document.getElementById('updateBanner');
         let updateAvailable = false;
