@@ -6,7 +6,7 @@
 
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="docs/screenshot-dark.png">
-  <img src="docs/screenshot-light.png" alt="gitで検索した結果と、Gemini・Grok・Naniに聞く選択肢">
+  <img src="docs/screenshot-light.png" alt="gitで検索した結果と、AIチャットのGemini・Grok・Naniに聞く選択肢">
 </picture>
 
 ## ライセンス

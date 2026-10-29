@@ -6,7 +6,7 @@ A personal browser start page, served at <https://sp.ycookiey.com>.
 
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="docs/screenshot-dark.png">
-  <img src="docs/screenshot-light.png" alt="Search results for git, with the options to ask Gemini, Grok or Nani">
+  <img src="docs/screenshot-light.png" alt="Search results for git, with the options to ask the AI chats Gemini, Grok or Nani">
 </picture>
 
 ## License
